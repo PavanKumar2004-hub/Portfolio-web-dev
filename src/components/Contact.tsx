@@ -38,18 +38,31 @@ export function Contact() {
     setErrorMessage("");
 
     try {
-      const response = await fetch("/api/contact", {
+      const accessKey =
+        process.env.NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY ||
+        "3627bb3f-63c9-4a45-8e0c-df32c017bb44";
+
+      // Direct client-side submission to Web3Forms (Required for free tier)
+      const response = await fetch("https://api.web3forms.com/submit", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Accept: "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          access_key: accessKey,
+          name: formData.name,
+          email: formData.email,
+          subject: formData.subject || `Portfolio Inquiry from ${formData.name}`,
+          message: formData.message,
+          from_name: `${formData.name} (Portfolio)`,
+        }),
       });
 
       const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to submit message");
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Failed to submit message to Web3Forms.");
       }
 
       setStatus("success");
@@ -66,9 +79,11 @@ export function Contact() {
         // Confetti fallback
       }
     } catch (err: any) {
-      console.error(err);
+      console.error("Submission error:", err);
       setStatus("error");
-      setErrorMessage(err.message || "An unexpected error occurred. Please try emailing directly.");
+      setErrorMessage(
+        err.message || "An unexpected error occurred. Please try emailing directly."
+      );
     }
   };
 
